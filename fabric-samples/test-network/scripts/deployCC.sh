@@ -122,18 +122,6 @@ packageChaincode() {
 # installChaincode PEER ORG
 installChaincode() {
   ORG=$1
-  setGlobals $ORG
-  set -x
-  peer lifecycle chaincode install ${CC_NAME}.tar.gz >&log.txt
-  res=$?
-  { set +x; } 2>/dev/null
-  cat log.txt
-  verifyResult $res "Chaincode installation on peer0.org${ORG} has failed"
-  successln "Chaincode is installed on peer0.org${ORG}"
-}
-
-installChaincodeIncludingPeers() {
-  ORG=$1
   PEER=$2
   PEER_PORT=$3
   setGlobalsIncludingPeers $ORG $PEER_PORT
@@ -222,37 +210,8 @@ commitChaincodeDefinition() {
   successln "Chaincode definition committed on channel '$CHANNEL_NAME'"
 }
 
-# queryCommitted ORG
-queryCommitted() {
-  ORG=$1
-  setGlobals $ORG
-  EXPECTED_RESULT="Version: ${CC_VERSION}, Sequence: ${CC_SEQUENCE}, Endorsement Plugin: escc, Validation Plugin: vscc"
-  infoln "Querying chaincode definition on peer0.org${ORG} on channel '$CHANNEL_NAME'..."
-  local rc=1
-  local COUNTER=1
-  # continue to poll
-  # we either get a successful response, or reach MAX RETRY
-  while [ $rc -ne 0 -a $COUNTER -lt $MAX_RETRY ]; do
-    sleep $DELAY
-    infoln "Attempting to Query committed status on peer0.org${ORG}, Retry after $DELAY seconds."
-    set -x
-    peer lifecycle chaincode querycommitted --channelID $CHANNEL_NAME --name ${CC_NAME} >&log.txt
-    res=$?
-    { set +x; } 2>/dev/null
-    test $res -eq 0 && VALUE=$(cat log.txt | grep -o '^Version: '$CC_VERSION', Sequence: [0-9]*, Endorsement Plugin: escc, Validation Plugin: vscc')
-    test "$VALUE" = "$EXPECTED_RESULT" && let rc=0
-    COUNTER=$(expr $COUNTER + 1)
-  done
-  cat log.txt
-  if test $rc -eq 0; then
-    successln "Query chaincode definition successful on peer0.org${ORG} on channel '$CHANNEL_NAME'"
-  else
-    fatalln "After $MAX_RETRY attempts, Query chaincode definition result on peer0.org${ORG} is INVALID!"
-  fi
-}
-
 # queryCommitted ORG PEER
-queryCommittedIncludingPeers() {
+queryCommitted() {
   ORG=$1
   PEER=$2
   PEER_PORT=$3
@@ -332,43 +291,43 @@ packageChaincode
 
 ## Install chaincode on all Organizations peer0
 infoln "Installing chaincode on peer0.org1..."
-installChaincodeIncludingPeers 1 0 7051
+installChaincode 1 0 7051
 infoln "Install chaincode on peer0.org2..."
-installChaincodeIncludingPeers 2 0 9051
+installChaincode 2 0 9051
 infoln "Install chaincode on peer0.org3..."
-installChaincodeIncludingPeers 3 0 11051
+installChaincode 3 0 11051
 infoln "Install chaincode on peer0.org4..."
-installChaincodeIncludingPeers 4 0 12051
+installChaincode 4 0 12051
 
 ## Install chaincode on all Organizations peer1
 infoln "Installing chaincode on peer1.org1..."
-installChaincodeIncludingPeers 1 1 7151
+installChaincode 1 1 7151
 infoln "Install chaincode on peer1.org2..."
-installChaincodeIncludingPeers 2 1 9151
+installChaincode 2 1 9151
 infoln "Install chaincode on peer1.org3..."
-installChaincodeIncludingPeers 3 1 11151
+installChaincode 3 1 11151
 infoln "Install chaincode on peer1.org4..."
-installChaincodeIncludingPeers 4 1 12151
+installChaincode 4 1 12151
 
 ## Install chaincode on all Organizations peer2
 infoln "Installing chaincode on peer2.org1..."
-installChaincodeIncludingPeers 1 2 7251
+installChaincode 1 2 7251
 infoln "Install chaincode on peer2.org2..."
-installChaincodeIncludingPeers 2 2 9251
+installChaincode 2 2 9251
 infoln "Install chaincode on peer2.org3..."
-installChaincodeIncludingPeers 3 2 11251
+installChaincode 3 2 11251
 infoln "Install chaincode on peer2.org4..."
-installChaincodeIncludingPeers 4 2 12251
+installChaincode 4 2 12251
 
 ## Install chaincode on all Organizations peer3
 infoln "Installing chaincode on peer3.org1..."
-installChaincodeIncludingPeers 1 3 7351
+installChaincode 1 3 7351
 infoln "Install chaincode on peer3.org2..."
-installChaincodeIncludingPeers 2 3 9351
+installChaincode 2 3 9351
 infoln "Install chaincode on peer3.org3..."
-installChaincodeIncludingPeers 3 3 11351
+installChaincode 3 3 11351
 infoln "Install chaincode on peer3.org4..."
-installChaincodeIncludingPeers 4 3 12351
+installChaincode 4 3 12351
 
 ## query whether the chaincode is installed
 queryInstalled 1
@@ -403,7 +362,7 @@ checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": tru
 checkCommitReadiness 3 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
 checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": true" "\"Org4MSP\": false"
 
-## now approve also for org3
+## now approve also for org4
 approveForMyOrg 4
 
 ## check whether the chaincode definition is ready to be committed
@@ -417,25 +376,25 @@ checkCommitReadiness 4 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Org3MSP\": tru
 commitChaincodeDefinition 1 2 3 4
 
 ## query on both orgs to see that the definition committed successfully
-queryCommitted 1
-queryCommitted 2
-queryCommitted 3
-queryCommitted 4
+queryCommitted 1 0 7051
+queryCommitted 2 0 9051
+queryCommitted 3 0 11051
+queryCommitted 4 0 12051
 
-queryCommittedIncludingPeers 1 1 7151
-queryCommittedIncludingPeers 2 1 9151
-queryCommittedIncludingPeers 3 1 11151
-queryCommittedIncludingPeers 4 1 12151
+queryCommitted 1 1 7151
+queryCommitted 2 1 9151
+queryCommitted 3 1 11151
+queryCommitted 4 1 12151
 
-queryCommittedIncludingPeers 1 2 7251
-queryCommittedIncludingPeers 2 2 9251
-queryCommittedIncludingPeers 3 2 11251
-queryCommittedIncludingPeers 4 2 12251
+queryCommitted 1 2 7251
+queryCommitted 2 2 9251
+queryCommitted 3 2 11251
+queryCommitted 4 2 12251
 
-queryCommittedIncludingPeers 1 3 7351
-queryCommittedIncludingPeers 2 3 9351
-queryCommittedIncludingPeers 3 3 11351
-queryCommittedIncludingPeers 4 3 12351
+queryCommitted 1 3 7351
+queryCommitted 2 3 9351
+queryCommitted 3 3 11351
+queryCommitted 4 3 12351
  
 ## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
 ## method defined
